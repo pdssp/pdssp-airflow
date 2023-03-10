@@ -1,0 +1,106 @@
+<!doctype html>
+<html>
+<header>
+<title>Path: {{ tree.name }}</title>
+<!-- Ajout de la bibliothèque jQuery -->
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<!-- Ajout des icônes d'arbre -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.3.0/css/all.min.css"/>
+<style>
+/* Masquer les puces li */
+ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+  
+  /* Masquer les puces ul */
+  li > ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  .tree-toggle {
+    font-family: "Font Awesome 5 Free";
+    font-weight: 900;
+    font-style: normal;
+    display: inline-block;
+    margin-right: 5px;    
+  }  
+  
+  /* Style pour les icônes d'arbre "expanded" */ 
+
+  .expandable.expanded::before {
+    font-family: "Font Awesome 5 Free";
+    font-weight: 900;
+    font-style: normal;
+    display: inline-block;    
+    content: "\f0d7"; 
+  }
+
+  .expandable::before {
+    font-family: "Font Awesome 5 Free";
+    font-weight: 900;
+    font-style: normal;
+    display: inline-block;     
+    content: "\f0da";      
+  }
+  
+  /* Masquer l'icône d'arbre sur les feuilles terminales */
+  li:not(:has(>ul)) > .tree-toggle {
+    display: none;
+  }
+
+  /* Ajouter un padding à gauche à tous les éléments de l'arbre */
+  li > a {
+    padding-left: 0px;
+  }
+  
+  /* Ajouter un padding à gauche récursif en fonction du niveau de profondeur */
+  ul ul {
+    padding-left: 20px;
+  }
+  
+  ul ul ul {
+    padding-left: 40px;
+  }
+  
+  ul ul ul ul {
+    padding-left: 60px;
+  }
+  
+</style>
+<script>
+// Code jQuery pour ouvrir et fermer les balises li
+$(document).ready(function() {
+  $('li:has(ul)').addClass('expandable').click(function(event) {
+    if (this == event.target) {
+      $(this).toggleClass('expanded');
+      $(this).children('ul').toggle('medium');
+    }
+    return false;
+  });
+  $('li:has(ul)').children('ul').hide().addClass('collapsed');
+});
+</script>
+</header>
+<body>
+<h1>{{ tree.name }}</h1>
+<ul>
+{% for item in tree.children recursive %}
+    {% if item.name.url %}
+        <li><span class="tree-toggle"></span><a href="/files/static/{{ tree.name }}/{{ item.name.url }}">{{ item.name.value }}</a> {%- if item.name.status %} <i class="{{ item.name.status }}" style="color:red"></i> {%- endif %}
+        {% if item.children %}
+            <ul>{{ loop(item.children) }}</ul>
+        {% endif %}</li>
+    {% else %}
+        <li><span class="tree-toggle"></span>{{ item.name }}
+            {% if item.children %}
+                <ul>{{ loop(item.children) }}</ul>
+            {% endif %}</li>
+    {% endif %}
+{% endfor %}
+</ul>
+</body>
+</html>

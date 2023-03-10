@@ -40,11 +40,7 @@ RUN apt-get update && \
     apt-get install -y \
     software-properties-common apt-transport-https wget git\
     make python3-pip && \
-    update-alternatives --install /usr/bin/pip pip /usr/bin/pip3 1 && \
-    pip install setuptools && \
-    git clone "https://github.com/pole-surfaces-planetaires/pdssp-airflow.git" && \
-    cd pdssp-airflow && \
-    make
+    update-alternatives --install /usr/bin/pip pip /usr/bin/pip3 1
 
 USER airflow
 
@@ -52,10 +48,10 @@ ADD ./requirements.txt /opt/airflow/
 
 RUN umask 0002; \
     python -m pip install --upgrade pip && \
-    pip install -r /opt/airflow/requirements.txt && \
-    pip install jupyterlab && \
-    pip install jupyterlab_h5web[full] && \
-    pip install apache-airflow-providers-papermill    
+    pip install setuptools && \
+#    git clone "https://github.com/pole-surfaces-planetaires/pdssp-airflow.git" && \
+#    cd pdssp-airflow && \
+    pip install -r /opt/airflow/requirements.txt  
 
 ENV PYTHONPATH "${PYTHONPATH}:/opt/airflow/plugins"
 ENV PATH "${PATH}:/home/airflow/.local/bin"

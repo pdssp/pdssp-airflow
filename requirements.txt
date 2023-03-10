@@ -4,5 +4,8 @@ flask-babelex
 pandas==1.5.3
 h5py==3.8.0
 matplotlib==3.7.1
+jupyterlab
+jupyterlab_h5web[full]
+apache-airflow-providers-papermill
 git+https://github.com/pdssp/pds_crawler@main#egg=pds_crawler
 git+https://github.com/pdssp/pymarsseason@main#egg=pymarsseason

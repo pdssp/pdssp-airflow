@@ -3,3 +3,4 @@ include README.rst
 include pyproject.toml
 include requirements.txt
 include conf
+include plugins/pds_plugin/appbuilderview/dirtree.html

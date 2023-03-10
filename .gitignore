@@ -131,3 +131,6 @@ dmypy.json
 pdssp-airflow-env/
 
 docs/build/
+logs/
+database/
+.pdssp-airflow

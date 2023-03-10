@@ -80,7 +80,8 @@ env:
 	echo "AIRFLOW_DOCKER_DATABASE=/opt/airflow/database" >> .env
 
 prepare-dev:
-	cp .pypirc ~${USER} && git init && echo "python3 -m venv pdssp-airflow-env && export PYTHONPATH=. && export PATH=`pwd`/pdssp-airflow-env/bin:"${PATH}"" > ${VENV} && echo "source \"`pwd`/pdssp-airflow-env/bin/activate\"" >> ${VENV} && scripts/install-hooks.bash && echo "\nnow source this file: \033[31msource ${VENV}\033[0m && make env"
+	cp .pypirc ~${USER} && git init && echo "python3 -m venv pdssp-airflow-env && export PYTHONPATH=.:`pwd`/plugins && export PATH=`pwd`/pdssp-airflow-env/bin:"${PATH}"" > ${VENV} && echo "source \"`pwd`/pdssp-airflow-env/bin/activate\"" >> ${VENV} && scripts/install-hooks.bash && echo "\nnow source this file: \033[31msource ${VENV}\033[0m && make env"
+
 
 install-dev:
 	pip install --upgrade pip && pip install -r requirements.txt && pip install -r requirements_dev.txt && pre-commit install && pre-commit autoupdate && python3 setup.py develop && make env
