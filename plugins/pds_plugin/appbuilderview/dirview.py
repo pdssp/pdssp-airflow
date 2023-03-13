@@ -103,12 +103,12 @@ stac_storage_view = StacStorageView()
 
 stac_storage_view_package = {
     "name": "STAC storage View",
-    "category": "Browse directory",
+    "category": "Storage directory",
     "view": stac_storage_view,
 }
 
 pds_storage_view_package = {
     "name": "PDS storage View",
-    "category": "Browse directory",
+    "category": "Storage directory",
     "view": pds_storage_view,
 }

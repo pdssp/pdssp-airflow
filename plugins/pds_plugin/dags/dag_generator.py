@@ -14,7 +14,11 @@ class BodyExtractionGeneratorDag:
 ## Workflow Name: $dag_id
 
 ### Description
-This workflow extracts the list of PDS (Planetary Data System) collections for a specified body. It checks for new data in the PDS database and if any new data is found, it extracts the list of collections for the specified body. The list of collections is then passed on to downstream tasks for further processing. This workflow is useful for indexing PDS data for a given planetary body.
+This workflow extracts the list of PDS (Planetary Data System) collections 
+for a specified body. It checks for new data in the PDS database and if any 
+new data is found, it extracts the list of collections for the specified body. 
+The list of collections is then passed on to downstream tasks for further 
+processing. This workflow is useful for indexing PDS data for a given planetary body.
 
 ### Parameters
 * dag_id: The ID of the DAG (Directed Acyclic Graph) for this workflow.
@@ -53,7 +57,7 @@ This workflow extracts the list of PDS (Planetary Data System) collections for a
 ## Workflow Name: $dag_id
 
 ### Description
-Extraction of PDS data from both ODE webservice and ODE DataSetExplorer for the body [body]
+Extraction of PDS data from both ODE webservice and ODE DataSetExplorer for $body
 
 ### Parameters
 * dag_id: The ID of the DAG (Directed Acyclic Graph) for this workflow.
@@ -103,7 +107,7 @@ Extraction of PDS data from both ODE webservice and ODE DataSetExplorer for the 
             schedule_interval=schedule_interval,            
             catchup=False,
         ) as dag:    
-            dag.doc_md = BodyExtractionGeneratorDag.DOC_LIST_COLL.substitute(dag_id = dag_id, description = dag.description)
+            dag.doc_md = BodyExtractionGeneratorDag.DOC_LIST_COLL.substitute(dag_id = dag_id)
             start_task = DummyOperator(task_id="Start")
             has_new_data_task_in_pds = PdsBranchOperator(task_id='Has_new_data_in_pds', database=database, body=body, next="pds_list_collection", otherwise="Stop")
             collections_task = PdsCollExtractOperator(task_id="pds_list_collection", database=database, body=body)    
@@ -136,7 +140,7 @@ Extraction of PDS data from both ODE webservice and ODE DataSetExplorer for the 
             schedule_interval=schedule_interval,            
             catchup=False,
         ) as dag:  
-            dag.doc_md = BodyExtractionGeneratorDag.DOC_DATA.substitute(dag_id = dag_id, description = dag.description)          
+            dag.doc_md = BodyExtractionGeneratorDag.DOC_DATA.substitute(dag_id = dag_id, body = body)          
             start_task = DummyOperator(task_id="Start")
             catalog_task = PdsDescExtractOperator(task_id='catalog_description_extraction', database=database, body=body)
             items_sample_task = PdsObsExtractOperator(task_id='sample_observation_extraction', database=database, body=body)
@@ -153,11 +157,11 @@ Extraction of PDS data from both ODE webservice and ODE DataSetExplorer for the 
             start_task >> items_sample_task >> [items_task, catalog_task] >> notification_task >> stop_task        
             
 class BodyTransformationGeneratorDag:      
-    DOC_STAC = """
+    DOC_STAC = Template("""
 ## Workflow Name: $dag_id
 
 ### Description
-STAC transformation of PDS collections for the body [body]
+STAC transformation of PDS collections for $body
 
 ### Parameters
 * dag_id: The ID of the DAG (Directed Acyclic Graph) for this workflow.
@@ -179,7 +183,7 @@ STAC transformation of PDS collections for the body [body]
 * tags: The tags for the DAG.
 * schedule_interval: The interval at which to schedule the DAG.
 * catchup: Whether to backfill past DAG runs.
-    """       
+    """)       
        
     @staticmethod
     def generate_data_transformation(dag_id, body: str, database: str, schedule_interval: str = None, retries: int = 2, retry_delay: timedelta = timedelta(hours=1), nb_records_per_page: int = 5000, *args, **kwargs):
@@ -195,14 +199,14 @@ STAC transformation of PDS collections for the body [body]
 
         with DAG(
             dag_id,
-            description=f"STAC transformation of PDS data for the body {body}",
+            description=f"STAC transformation of PDS data for {body}",
             default_args=args,
             max_active_runs=1,
             tags=["production", "PDS", "transformation", body],
             schedule_interval=schedule_interval,            
             catchup=False,
         ) as dag:  
-            dag.doc_md = BodyTransformationGeneratorDag.DOC_STAC.substitute(dag_id = dag_id, description = dag.description)          
+            dag.doc_md = BodyTransformationGeneratorDag.DOC_STAC.substitute(dag_id = dag_id, body = body)          
             start_task = DummyOperator(task_id="Start")
             has_new_collection = PdsCacheBranchOperator(task_id='Has_new_collection_to_transform', database=database, body=body, next="stac_transform_catalogs", otherwise="Stop")
             stac_catalog = StacCatalogTranformOperator(task_id='stac_transform_catalogs', database=database, body=body)
@@ -210,4 +214,4 @@ STAC transformation of PDS collections for the body [body]
             notification_task = DummyOperator(task_id='Notification')
             stop_task = DummyOperator(task_id="Stop")   
             start_task >> has_new_collection >> [stac_catalog, notification_task]
-            stac_catalog >> notification_task >> stop_task      
+            stac_catalog >> stac_item >> notification_task >> stop_task      
