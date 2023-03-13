@@ -17,7 +17,8 @@ class ReportLink(BaseOperatorLink):
 
     def get_link(self, operator: AbstractOperator , *, ti_key: TaskInstanceKey):
         run_id: str = ti_key.run_id
-        name: str = run_id+".md"
+        task_id: str = ti_key.task_id
+        name: str = f"{task_id}_{run_id}.md"
         filename = os.path.join(Variable.get("pds_database"), name)
         if os.path.exists(filename):
             result = os.path.join("/files/static",name)

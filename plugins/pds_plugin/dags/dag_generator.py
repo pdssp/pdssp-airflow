@@ -4,7 +4,7 @@ from airflow.operators.dummy_operator import DummyOperator
 from airflow.utils.edgemodifier import Label
 
 from datetime import timedelta
-from pds_plugin.operators import PdsBranchOperator, PdsCollExtractOperator, PdsDescExtractOperator, PdsObsExtractOperator, PdsCacheBranchOperator
+from pds_plugin.operators import PdsBranchOperator, PdsCollExtractOperator, PdsDescExtractOperator, PdsObsExtractOperator, PdsCacheBranchOperator, StacCatalogTranformOperator, StacItemTranformOperator
 
 from string import Template
 
@@ -116,7 +116,7 @@ Extraction of PDS data from both ODE webservice and ODE DataSetExplorer for the 
             has_new_data_task_in_pds >> Label("No new data was found") >> stop_task
             
     @staticmethod
-    def generate_data_extraction(dag_id, body: str, database: str, schedule_interval: str = None, retries: int = 2, retry_delay: timedelta = timedelta(hours=1), *args, **kwargs):
+    def generate_data_extraction(dag_id, body: str, database: str, schedule_interval: str = None, retries: int = 2, retry_delay: timedelta = timedelta(hours=1), nb_records_per_page: int = 5000, *args, **kwargs):
         args = {
             "owner": "pdssp-crawler",
             "start_date": pendulum.datetime(2023, 1, 1, tz='Europe/Paris'),
@@ -143,9 +143,71 @@ Extraction of PDS data from both ODE webservice and ODE DataSetExplorer for the 
             items_sample_task.nb_workers = int(kwargs.get("nb_workers", "3"))
             items_sample_task.time_sleep = int(kwargs.get("time_sleep", "2"))            
             items_sample_task.is_sample = True
+            items_sample_task.nb_records_per_page = nb_records_per_page
             items_task = PdsObsExtractOperator(task_id='observation_extraction', database=database, body=body)
+            items_task.nb_records_per_page = nb_records_per_page
             items_task.nb_workers = int(kwargs.get("nb_workers", "3"))
-            items_task.time_sleep = int(kwargs.get("time_sleep", "2"))
+            items_task.time_sleep = int(kwargs.get("time_sleep", "2"))            
             notification_task = DummyOperator(task_id='Notification')
             stop_task = DummyOperator(task_id="Stop")   
             start_task >> items_sample_task >> [items_task, catalog_task] >> notification_task >> stop_task        
+            
+class BodyTransformationGeneratorDag:      
+    DOC_STAC = """
+## Workflow Name: $dag_id
+
+### Description
+STAC transformation of PDS collections for the body [body]
+
+### Parameters
+* dag_id: The ID of the DAG (Directed Acyclic Graph) for this workflow.
+* body: The name of the planetary body for which to transform data to STAC.
+* args: The default arguments for the DAG.
+* schedule_interval: The interval at which to schedule the DAG.
+* database: The name of the PDS database.
+
+### Operators
+1. Start: This is a dummy task that marks the start of the DAG.
+5. Notification: This is a dummy task that marks the completion of the data extraction process.
+6. Stop: This is a dummy task that marks the end of the DAG.
+
+### DAG Settings
+* dag_id: The ID of the DAG.
+* description: A brief description of the DAG.
+* default_args: The default arguments for the DAG.
+* max_active_runs: The maximum number of active DAG runs.
+* tags: The tags for the DAG.
+* schedule_interval: The interval at which to schedule the DAG.
+* catchup: Whether to backfill past DAG runs.
+    """       
+       
+    @staticmethod
+    def generate_data_transformation(dag_id, body: str, database: str, schedule_interval: str = None, retries: int = 2, retry_delay: timedelta = timedelta(hours=1), nb_records_per_page: int = 5000, *args, **kwargs):
+        args = {
+            "owner": "pdssp-crawler",
+            "start_date": pendulum.datetime(2023, 1, 1, tz='Europe/Paris'),
+            "depends_on_past": False,
+            "email_on_failure": False,
+            "email_on_retry": False,
+            "retries": retries,
+            "retry_delay": retry_delay,
+        }
+
+        with DAG(
+            dag_id,
+            description=f"STAC transformation of PDS data for the body {body}",
+            default_args=args,
+            max_active_runs=1,
+            tags=["production", "PDS", "transformation", body],
+            schedule_interval=schedule_interval,            
+            catchup=False,
+        ) as dag:  
+            dag.doc_md = BodyTransformationGeneratorDag.DOC_STAC.substitute(dag_id = dag_id, description = dag.description)          
+            start_task = DummyOperator(task_id="Start")
+            has_new_collection = PdsCacheBranchOperator(task_id='Has_new_collection_to_transform', database=database, body=body, next="stac_transform_catalogs", otherwise="Stop")
+            stac_catalog = StacCatalogTranformOperator(task_id='stac_transform_catalogs', database=database, body=body)
+            stac_item = StacItemTranformOperator(task_id='stac_stransform_items', database=database, body=body)          
+            notification_task = DummyOperator(task_id='Notification')
+            stop_task = DummyOperator(task_id="Stop")   
+            start_task >> has_new_collection >> [stac_catalog, notification_task]
+            stac_catalog >> notification_task >> stop_task      

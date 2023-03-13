@@ -31,7 +31,8 @@ BodyExtractionGeneratorDag.generate_data_extraction(
     dag_id="Moon_extraction", 
     body="Moon", database=database,
     nb_workers = int(nb_workers),
-    sleep_time = int(sleep_time)    
+    sleep_time = int(sleep_time),
+    nb_records_per_page = 500    
 )
 BodyExtractionGeneratorDag.generate_data_extraction(
     dag_id="Mars_extraction", 

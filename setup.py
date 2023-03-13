@@ -35,7 +35,6 @@ setuptools.setup(
     setup_requires=setup_requirements,
     test_suite='tests',
     tests_require=test_requirements,
-    package_data={about["__name_soft__"]: ["README.md", "logging.conf"]},
     classifiers=[
         "Programming Language :: Python :: 3",
         "License :: OSI Approved :: GNU General Public License v3 (GPLv3)GNU Lesser General Public License v3 (LGPLv3)",

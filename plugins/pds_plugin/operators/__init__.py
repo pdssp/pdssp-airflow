@@ -1,5 +1,6 @@
 from pds_plugin.operators.check import PdsBranchOperator, PdsCacheBranchOperator
 from pds_plugin.operators.extract import PdsCollExtractOperator, PdsDescExtractOperator, PdsObsExtractOperator
+from pds_plugin.operators.transform import StacCatalogTranformOperator, StacItemTranformOperator
 from pds_plugin.operators.report import ReportLink
 __all__ = [
     "PdsBranchOperator",
@@ -7,6 +8,8 @@ __all__ = [
     "PdsCollExtractOperator",
     "PdsDescExtractOperator",
     "PdsObsExtractOperator",
-    "ReportLink"
+    "ReportLink",
+    "StacCatalogTranformOperator",
+    "StacItemTranformOperator"
 ]
 

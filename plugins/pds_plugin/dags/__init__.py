@@ -1,5 +1,5 @@
-from pds_plugin.dags.dag_generator import BodyExtractionGeneratorDag
+from pds_plugin.dags.dag_generator import BodyExtractionGeneratorDag, BodyTransformationGeneratorDag
 
 __all__ = [
-    "BodyExtractionGenerator"
+    "BodyExtractionGeneratorDag", "BodyTransformationGeneratorDag"
 ]
