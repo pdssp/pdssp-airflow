@@ -1,6 +1,20 @@
 include LICENSE
+include AUTHORS.rst
+include CHANGELOG
+include CONSTRIBUTING.rst
+include dags
+include docker
+include docker-compose.yaml
+include Dockerfile
+include .dockerignore
+include docs
+include Makefile
 include README.rst
 include pyproject.toml
 include requirements.txt
-include conf
-include plugins/pds_plugin/appbuilderview/dirtree.html
+include requirements_dev.txt
+include scripts
+include tests
+include plugins
+include tox.ini
+

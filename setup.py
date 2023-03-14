@@ -16,7 +16,7 @@ test_requirements = ['pytest>=3', ]
 
 about = {}
 with open(
-    path.join(here, "pdssp-airflow", "_version.py"),
+    path.join(here, "plugins/pds_plugin", "_version.py"),
     encoding="utf-8",
 ) as f:
     exec(f.read(), about)
@@ -31,6 +31,7 @@ setuptools.setup(
     url=about["__url__"],
     license=about["__license__"],
     long_description_content_type="text/markdown",
+    include_package_data=True,
     packages=setuptools.find_packages(),
     setup_requires=setup_requirements,
     test_suite='tests',
@@ -42,12 +43,4 @@ setuptools.setup(
     ],
     python_requires=">=3.6",
     install_requires=required,
-    entry_points={
-        "console_scripts": [
-            about["__name_soft__"]
-            + "="
-            + about["__name_soft__"]
-            + ".__main__:run",
-        ],
-    },  # Optional
 )

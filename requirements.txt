@@ -7,5 +7,5 @@ matplotlib==3.7.1
 jupyterlab
 jupyterlab_h5web[full]
 apache-airflow-providers-papermill
-git+https://github.com/pdssp/pds_crawler@main#egg=pds_crawler
-git+https://github.com/pdssp/pymarsseason@main#egg=pymarsseason
+pds_crawler@git+https://github.com/pdssp/pds_crawler@main#egg=pds_crawler
+pymarsseason@git+https://github.com/pdssp/pymarsseason@main#egg=pymarsseason

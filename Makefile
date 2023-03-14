@@ -72,6 +72,15 @@ init:
 user:
 	python3 setup.py install --user && make env
 
+start:
+	make env && docker-compose up
+
+stop:
+	docker-compose stop
+
+remove:
+	docker-compose down
+
 env:
 	echo "AIRFLOW_UID=`id -u`" > .env
 	echo "AIRFLOW_DOCKER_DAG=/opt/airflow/dags" >> .env
@@ -145,3 +154,6 @@ update_req_dev:
 
 pyclean:
 	find . -type f -name '*.py[co]' -delete -o -type d -name __pycache__ -delete
+
+clean:
+	make pyclean && rm -rf docs/build
