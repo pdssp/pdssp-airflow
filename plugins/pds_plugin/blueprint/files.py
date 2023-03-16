@@ -10,7 +10,7 @@ from flask import Blueprint
 
 bp = Blueprint(
     "serve_files",
-    __name__,
+    "Storage directory",
     url_prefix="/files",
     static_folder="/opt/airflow/database", 
     static_url_path="/static",

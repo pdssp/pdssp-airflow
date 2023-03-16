@@ -2,11 +2,17 @@ import pendulum
 from airflow import DAG
 from airflow.operators.dummy_operator import DummyOperator
 from airflow.utils.edgemodifier import Label
-
-from datetime import timedelta
+from datetime import timedelta, datetime
 from pds_plugin.operators import PdsBranchOperator, PdsCollExtractOperator, PdsDescExtractOperator, PdsObsExtractOperator, PdsCacheBranchOperator, StacCatalogTranformOperator, StacItemTranformOperator
 
 from string import Template
+
+def generate_run_id(prefix: str):
+    """
+    Generate a unique run ID with a prefix.
+    """
+    timestamp = datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
+    return f'{prefix.upper()}_{timestamp}'
 
 class BodyExtractionGeneratorDag:
     
@@ -51,6 +57,7 @@ processing. This workflow is useful for indexing PDS data for a given planetary 
 * tags: The tags for the DAG.
 * schedule_interval: The interval at which to schedule the DAG.
 * catchup: Whether to backfill past DAG runs.
+* is_paused_upon_creation: Start at creation
     """)
     
     DOC_DATA = Template("""
@@ -84,6 +91,7 @@ Extraction of PDS data from both ODE webservice and ODE DataSetExplorer for $bod
 * tags: The tags for the DAG.
 * schedule_interval: The interval at which to schedule the DAG.
 * catchup: Whether to backfill past DAG runs.
+* is_paused_upon_creation: Start at creation
     """)
     
     @staticmethod
@@ -96,6 +104,7 @@ Extraction of PDS data from both ODE webservice and ODE DataSetExplorer for $bod
             "email_on_retry": False,
             "retries": retries,
             "retry_delay": retry_delay,
+            'run_id': generate_run_id(body+"_"+dag_id)            
         }
 
         with DAG(
@@ -106,15 +115,35 @@ Extraction of PDS data from both ODE webservice and ODE DataSetExplorer for $bod
             tags=["production", "PDS", "indexing", body],
             schedule_interval=schedule_interval,            
             catchup=False,
+            is_paused_upon_creation=False
         ) as dag:    
+            # Set documentation
             dag.doc_md = BodyExtractionGeneratorDag.DOC_LIST_COLL.substitute(dag_id = dag_id)
+            
+            # Start
             start_task = DummyOperator(task_id="Start")
+            
+            # Check data to process
             has_new_data_task_in_pds = PdsBranchOperator(task_id='Has_new_data_in_pds', database=database, body=body, next="pds_list_collection", otherwise="Stop")
-            collections_task = PdsCollExtractOperator(task_id="pds_list_collection", database=database, body=body)    
+            
+            # Extract the list of collections to extract
+            collections_task = PdsCollExtractOperator(
+                task_id="pds_list_collection", 
+                database=database, 
+                body=body,
+                retries=3,
+                retry_delay=timedelta(minutes=5),
+            )    
             collections_task.nb_workers = int(kwargs.get("nb_workers", "3"))
-            collections_task.time_sleep = int(kwargs.get("time_sleep", "2"))            
+            collections_task.time_sleep = int(kwargs.get("time_sleep", "2")) 
+            
+            # Notification           
             notification_task = DummyOperator(task_id='Notification')
+            
+            # Stop taks
             stop_task = DummyOperator(task_id="Stop")   
+            
+            # Workflow
             start_task >> has_new_data_task_in_pds
             has_new_data_task_in_pds >> Label("New data was found in PDS") >> collections_task >> notification_task >> stop_task
             has_new_data_task_in_pds >> Label("No new data was found") >> stop_task
@@ -129,6 +158,7 @@ Extraction of PDS data from both ODE webservice and ODE DataSetExplorer for $bod
             "email_on_retry": False,
             "retries": retries,
             "retry_delay": retry_delay,
+            'run_id': generate_run_id(body+"_"+dag_id)            
         }
 
         with DAG(
@@ -139,21 +169,35 @@ Extraction of PDS data from both ODE webservice and ODE DataSetExplorer for $bod
             tags=["production", "PDS", "extraction", body],
             schedule_interval=schedule_interval,            
             catchup=False,
+            is_paused_upon_creation=False
         ) as dag:  
+            # Set the documentation
             dag.doc_md = BodyExtractionGeneratorDag.DOC_DATA.substitute(dag_id = dag_id, body = body)          
+            
+            # Start
             start_task = DummyOperator(task_id="Start")
+            
+            # PDS3 objects extraction
             catalog_task = PdsDescExtractOperator(task_id='catalog_description_extraction', database=database, body=body)
+            
+            # Get a sample to find PDS3 objects on the web
             items_sample_task = PdsObsExtractOperator(task_id='sample_observation_extraction', database=database, body=body)
             items_sample_task.nb_workers = int(kwargs.get("nb_workers", "3"))
             items_sample_task.time_sleep = int(kwargs.get("time_sleep", "2"))            
             items_sample_task.is_sample = True
             items_sample_task.nb_records_per_page = nb_records_per_page
+            
+            # Observation extraction
             items_task = PdsObsExtractOperator(task_id='observation_extraction', database=database, body=body)
             items_task.nb_records_per_page = nb_records_per_page
             items_task.nb_workers = int(kwargs.get("nb_workers", "3"))
             items_task.time_sleep = int(kwargs.get("time_sleep", "2"))            
             notification_task = DummyOperator(task_id='Notification')
-            stop_task = DummyOperator(task_id="Stop")   
+            
+            # Stop
+            stop_task = DummyOperator(task_id="Stop") 
+            
+            # Define the workflow  
             start_task >> items_sample_task >> [items_task, catalog_task] >> notification_task >> stop_task        
             
 class BodyTransformationGeneratorDag:      
@@ -183,6 +227,7 @@ STAC transformation of PDS collections for $body
 * tags: The tags for the DAG.
 * schedule_interval: The interval at which to schedule the DAG.
 * catchup: Whether to backfill past DAG runs.
+* is_paused_upon_creation: Start at creation
     """)       
        
     @staticmethod
@@ -195,6 +240,7 @@ STAC transformation of PDS collections for $body
             "email_on_retry": False,
             "retries": retries,
             "retry_delay": retry_delay,
+            'run_id': generate_run_id(body+"_"+dag_id)            
         }
 
         with DAG(
@@ -205,13 +251,29 @@ STAC transformation of PDS collections for $body
             tags=["production", "PDS", "transformation", body],
             schedule_interval=schedule_interval,            
             catchup=False,
+            is_paused_upon_creation=False,
         ) as dag:  
+            # Set the documentation
             dag.doc_md = BodyTransformationGeneratorDag.DOC_STAC.substitute(dag_id = dag_id, body = body)          
+            
+            # Start
             start_task = DummyOperator(task_id="Start")
+            
+            # Check if new collection to transfer
             has_new_collection = PdsCacheBranchOperator(task_id='Has_new_collection_to_transform', database=database, body=body, next="stac_transform_catalogs", otherwise="Stop")
+            
+            # PDS3 transformation
             stac_catalog = StacCatalogTranformOperator(task_id='stac_transform_catalogs', database=database, body=body)
+            
+            # Observations transformation
             stac_item = StacItemTranformOperator(task_id='stac_stransform_items', database=database, body=body)          
+            
+            # Notification
             notification_task = DummyOperator(task_id='Notification')
+            
+            # stop
             stop_task = DummyOperator(task_id="Stop")   
+            
+            # Define workflow
             start_task >> has_new_collection >> [stac_catalog, notification_task]
             stac_catalog >> stac_item >> notification_task >> stop_task      

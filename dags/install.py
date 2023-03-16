@@ -74,6 +74,7 @@ dag = DAG(
     description="Install the needed variables.",
     default_args=default_args,
     schedule_interval="@once",
+    is_paused_upon_creation=False
 )
 
 
